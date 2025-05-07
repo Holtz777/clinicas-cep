@@ -106,7 +106,7 @@ def carregar_clinicas(arquivo='clinicas.csv'):
 clinicas = carregar_clinicas()
 
 # Função principal para encontrar clínicas próximas
-def encontrar_clinicas_proximas(cep, max_resultados=5):
+def encontrar_clinicas_proximas(cep, max_resultados=5, distancia_maxima=None, especialidade=None):
     # Verificar se a base de clínicas foi carregada
     if not clinicas:
         return {
@@ -133,6 +133,16 @@ def encontrar_clinicas_proximas(cep, max_resultados=5):
                 clinica['longitude']
             )
             
+            # Aplicar filtro de distância máxima
+            if distancia_maxima is not None and distancia > distancia_maxima:
+                continue
+                
+            # Aplicar filtro de especialidade
+            if especialidade is not None:
+                # Verifica se a especialidade está contida na string de especialidades da clínica
+                if 'especialidades' not in clinica or especialidade.upper() not in clinica['especialidades'].upper():
+                    continue
+            
             clinica_com_distancia = clinica.copy()
             clinica_com_distancia['distancia'] = round(distancia, 2)
             clinica_com_distancia['distancia_texto'] = f"{round(distancia, 2)} km"
@@ -158,6 +168,11 @@ def encontrar_clinicas_proximas(cep, max_resultados=5):
             "longitude": coords_origem['longitude']
         },
         "total_clinicas_encontradas": len(clinicas_com_distancia),
+        "filtros_aplicados": {
+            "distancia_maxima": distancia_maxima,
+            "especialidade": especialidade,
+            "max_resultados": max_resultados
+        },
         "clinicas_proximas": clinicas_proximas
     }
     
@@ -168,6 +183,10 @@ def api_clinicas_proximas():
     # Obter o CEP da query string
     cep = request.args.get('cep')
     max_resultados = request.args.get('max', default=5, type=int)
+    
+    # Novos parâmetros
+    distancia_maxima = request.args.get('distancia', default=None, type=float)
+    especialidade = request.args.get('especialidade', default=None)
     
     if not cep:
         return jsonify({
@@ -186,7 +205,7 @@ def api_clinicas_proximas():
         }), 400
     
     # Buscar clínicas próximas
-    resultado = encontrar_clinicas_proximas(cep, max_resultados)
+    resultado = encontrar_clinicas_proximas(cep, max_resultados, distancia_maxima, especialidade)
     
     if not resultado.get("success", False):
         return jsonify(resultado), 404
@@ -202,8 +221,13 @@ def home():
         "rotas_disponíveis": [
             {
                 "rota": "/api/clinicas/proximas",
-                "parametros": ["cep (obrigatório)", "max (opcional, padrão: 5)"],
-                "exemplo": "/api/clinicas/proximas?cep=13020440&max=3"
+                "parametros": [
+                    "cep (obrigatório): CEP para busca",
+                    "max (opcional, padrão: 5): Número máximo de resultados",
+                    "distancia (opcional): Distância máxima em km",
+                    "especialidade (opcional): Filtro por especialidade médica"
+                ],
+                "exemplo": "/api/clinicas/proximas?cep=13020440&max=3&distancia=10&especialidade=PSICOLOGIA"
             }
         ],
         "total_clinicas": len(clinicas)
