@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 # Configuração
-API_KEY = "AIzaSyAddkxy6dycpWqTu82oWHf4Mb3I-qfJmr0"  # Substitua pela sua chave da API do Google
+API_KEY = os.environ.get("API_KEY")  
 
 # Função para obter coordenadas a partir do CEP usando Google Maps API
 def obter_coordenadas_google(cep):
